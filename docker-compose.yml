@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:18.0-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DBNAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DBNAME}"]
+      interval: 10s
+      retries: 5
+    ports:
+      - "5432:${PG_PORT}"
+    networks:
+      - subscriptions-net
+
+  goose:
+    build:
+      context: .
+      dockerfile: build/goose/Dockerfile
+    container_name: goose
+    restart: no
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - GOOSE_DRIVER=${GOOSE_DRIVER}
+      - GOOSE_DBSTRING=host=postgres port=${PG_PORT}
+        user=${PG_USER} password=${PG_PASSWORD}
+        dbname=${PG_DBNAME} sslmode=${PG_SSLMODE}
+      - GOOSE_VERBOSE=true
+    command: ["up"]
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - subscriptions-net
+
+  subscriptions:
+    build:
+      context: .
+      dockerfile: build/service/Dockerfile
+    container_name: subscriptions
+    ports:
+      - "8080:${HTTP_SERVER_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - subscriptions-net
+
+volumes:
+  db_data:
+
+networks:
+  subscriptions-net:
+    driver: bridge
+    name: subscriptions-net
