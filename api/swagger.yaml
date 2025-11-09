@@ -1,0 +1,312 @@
+openapi: 3.0.0
+info:
+  title: Subscriptions Service API
+  version: 1.0.0
+
+paths:
+  /subscriptions:
+    get:
+      summary: List subscriptions
+      operationId: listSubscriptions
+      tags:
+        - subscriptions
+      parameters:
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: service_name
+          in: query
+          description: Filter by service name
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: A paginated list of subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a subscription
+      operationId: createSubscription
+      tags:
+        - subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewSubscription"
+            example:
+              service_name: "Yandex Plus"
+              monthly_cost: 12.99
+              user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              start_date: "11-2025"
+              end_date: "11-2026"
+      responses:
+        "201":
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subscriptions/{id}:
+    get:
+      summary: Get a subscription by ID
+      operationId: getSubscriptionById
+      tags:
+        - subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the subscription to retrieve
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: A single subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "404":
+          description: Subscription not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update a subscription
+      operationId: updateSubscription
+      tags:
+        - subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the subscription to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewSubscription"
+            example:
+              service_name: "Yandex Plus"
+              monthly_cost: 9.99
+              user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              start_date: "01-2024"
+              end_date: null
+      responses:
+        "200":
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "404":
+          description: Subscription not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete a subscription
+      operationId: deleteSubscription
+      tags:
+        - subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the subscription to delete
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Subscription deleted successfully
+        "404":
+          description: Subscription not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /subscriptions/total_cost:
+    get:
+      summary: Calculate total subscription cost
+      operationId: getTotalCost
+      tags:
+        - subscriptions
+      parameters:
+        - name: user_id
+          in: query
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+        - name: service_name
+          in: query
+          description: Name of the service
+          schema:
+            type: string
+        - name: start
+          in: query
+          description: Start of the period (MM-YYYY)
+          schema:
+            type: string
+            pattern: '^(0[1-9]|1[0-2])-(19|20)\\d{2}$'
+            example: "01-2025"
+        - name: end
+          in: query
+          description: End of the period (MM-YYYY)
+          schema:
+            type: string
+            pattern: '^(0[1-9]|1[0-2])-(19|20)\\d{2}$'
+            example: "12-2025"
+      responses:
+        "200":
+          description: Total cost calculated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_cost:
+                    type: number
+                    format: float
+                    description: The total calculated cost in rubles.
+        "400":
+          description: Bad request, for example, missing user_id or service_name when required.
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the subscription.
+        service_name:
+          type: string
+          description: Name of the service.
+        monthly_cost:
+          type: number
+          format: float
+          description: Monthly cost in rubles.
+        user_id:
+          type: string
+          format: uuid
+          description: ID of the user.
+        start_date:
+          type: string
+          pattern: '^(0[1-9]|1[0-2])-(19|20)\\d{2}$'
+          description: Subscription start date (MM-YYYY).
+          example: "11-2025"
+        end_date:
+          type: string
+          pattern: '^(0[1-9]|1[0-2])-(19|20)\\d{2}$'
+          description: Subscription end date (MM-YYYY), optional.
+          nullable: true
+          example: "12-2026"
+      required:
+        - id
+        - service_name
+        - monthly_cost
+        - user_id
+        - start_date
+
+    NewSubscription:
+      type: object
+      properties:
+        service_name:
+          type: string
+          example: "Yandex Plus"
+        monthly_cost:
+          type: number
+          format: float
+          example: 12.99
+        user_id:
+          type: string
+          format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        start_date:
+          type: string
+          description: Start month and year (MM-YYYY)
+          pattern: "^(0[1-9]|1[0-2])-(19|20)\\d{2}$"
+          example: "11-2025"
+        end_date:
+          type: string
+          description: End month and year (MM-YYYY)
+          pattern: "^(0[1-9]|1[0-2])-(19|20)\\d{2}$"
+          example: "11-2026"
+      required:
+        - service_name
+        - monthly_cost
+        - user_id
+        - start_date
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+      required:
+        - code
+        - message
