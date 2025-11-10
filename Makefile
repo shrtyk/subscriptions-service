@@ -61,4 +61,4 @@ migrations/status:
 
 # Generate DTOs
 dto/generate:
-	@go generate ./internal/api/http/dto/generate.go
+	@go generate ./internal/api/http/dto/dto.go
