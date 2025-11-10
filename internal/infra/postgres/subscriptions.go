@@ -1,9 +1,16 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shrtyk/subscriptions-service/internal/config"
+	"github.com/shrtyk/subscriptions-service/internal/core/domain"
+	"github.com/shrtyk/subscriptions-service/internal/core/ports/repos"
+	"github.com/shrtyk/subscriptions-service/pkg/errkit"
 )
 
 const (
@@ -24,4 +31,105 @@ func NewSubsRepo(db *sql.DB, cfg *config.RepoConfig) *subsRepo {
 		db:  db,
 		cfg: cfg,
 	}
+}
+
+func (r *subsRepo) Create(ctx context.Context, sub *domain.Subscription) error {
+	_, err := r.db.ExecContext(ctx, createQuery, sub.ID, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return errkit.WrapErr(opCreate, repos.KindDuplicate, err)
+		}
+		return errkit.WrapErr(opCreate, repos.KindUnknown, err)
+	}
+
+	return nil
+}
+
+func (r *subsRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error) {
+	sub := &domain.Subscription{}
+	err := r.db.QueryRowContext(ctx, getByIDQuery, id).Scan(
+		&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
+		&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errkit.WrapErr(opGetByID, repos.KindNotFound, err)
+		}
+		return nil, errkit.WrapErr(opGetByID, repos.KindUnknown, err)
+	}
+
+	return sub, nil
+}
+
+func (r *subsRepo) Update(ctx context.Context, sub *domain.Subscription) error {
+	res, err := r.db.ExecContext(ctx, updateQuery, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate, sub.ID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return errkit.WrapErr(opUpdate, repos.KindDuplicate, err)
+		}
+		return errkit.WrapErr(opUpdate, repos.KindUnknown, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errkit.WrapErr(opUpdate, repos.KindUnknown, err)
+	}
+	if rowsAffected == 0 {
+		return errkit.NewErr(opUpdate, repos.KindNotFound)
+	}
+
+	return nil
+}
+
+func (r *subsRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	res, err := r.db.ExecContext(ctx, deleteQuery, id)
+	if err != nil {
+		return errkit.WrapErr(opDelete, repos.KindUnknown, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errkit.WrapErr(opDelete, repos.KindUnknown, err)
+	}
+	if rowsAffected == 0 {
+		return errkit.NewErr(opDelete, repos.KindNotFound)
+	}
+
+	return nil
+}
+
+func (r *subsRepo) List(
+	ctx context.Context,
+	filter domain.SubscriptionFilter,
+) ([]domain.Subscription, error) {
+	query, args, err := r.buildListQuery(filter)
+	if err != nil {
+		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+	}
+	defer rows.Close()
+
+	subs := make([]domain.Subscription, 0)
+	for rows.Next() {
+		var sub domain.Subscription
+		if err := rows.Scan(
+			&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
+			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
+		); err != nil {
+			return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+		}
+		subs = append(subs, sub)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+	}
+
+	return subs, nil
 }
