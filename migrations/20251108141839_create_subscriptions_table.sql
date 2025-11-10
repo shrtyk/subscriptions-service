@@ -3,7 +3,7 @@
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY DEFAULT uuidv7 (),
   service_name VARCHAR(255) NOT NULL,
-  monthly_cost DECIMAL(10, 2) NOT NULL,
+  monthly_cost INTEGER NOT NULL,
   user_id UUID NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE,
