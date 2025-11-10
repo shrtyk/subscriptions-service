@@ -66,7 +66,7 @@ paths:
               $ref: "#/components/schemas/NewSubscription"
             example:
               service_name: "Yandex Plus"
-              monthly_cost: 12.99
+              monthly_cost: 400
               user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
               start_date: "11-2025"
               end_date: "11-2026"
@@ -134,7 +134,7 @@ paths:
               $ref: "#/components/schemas/NewSubscription"
             example:
               service_name: "Yandex Plus"
-              monthly_cost: 9.99
+              monthly_cost: 999
               user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
               start_date: "01-2024"
               end_date: null
@@ -219,8 +219,7 @@ paths:
                 type: object
                 properties:
                   total_cost:
-                    type: number
-                    format: float
+                    type: integer
                     description: The total calculated cost in rubles.
         "400":
           description: Bad request, for example, missing user_id or service_name when required.
@@ -244,8 +243,7 @@ components:
           type: string
           description: Name of the service.
         monthly_cost:
-          type: number
-          format: float
+          type: integer
           description: Monthly cost in rubles.
         user_id:
           type: string
@@ -276,9 +274,8 @@ components:
           type: string
           example: "Yandex Plus"
         monthly_cost:
-          type: number
-          format: float
-          example: 12.99
+          type: integer
+          example: 400
         user_id:
           type: string
           format: uuid
