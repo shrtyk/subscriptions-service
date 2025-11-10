@@ -1,5 +1,7 @@
 package repos
 
+import "github.com/shrtyk/subscriptions-service/pkg/errkit"
+
 type RepoKind int
 
 const (
@@ -20,4 +22,12 @@ func (k RepoKind) String() string {
 	default:
 		return "Unknown"
 	}
+}
+
+func NewErr(op string, kind RepoKind) error {
+	return errkit.NewErr(op, kind)
+}
+
+func WrapErr(op string, kind RepoKind, cause error) error {
+	return errkit.WrapErr(op, kind, cause)
 }

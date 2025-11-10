@@ -10,7 +10,6 @@ import (
 	"github.com/shrtyk/subscriptions-service/internal/config"
 	"github.com/shrtyk/subscriptions-service/internal/core/domain"
 	"github.com/shrtyk/subscriptions-service/internal/core/ports/repos"
-	"github.com/shrtyk/subscriptions-service/pkg/errkit"
 )
 
 const (
@@ -41,9 +40,9 @@ func (r *subsRepo) Create(ctx context.Context, sub *domain.Subscription) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return errkit.WrapErr(opCreate, repos.KindDuplicate, err)
+			return repos.WrapErr(opCreate, repos.KindDuplicate, err)
 		}
-		return errkit.WrapErr(opCreate, repos.KindUnknown, err)
+		return repos.WrapErr(opCreate, repos.KindUnknown, err)
 	}
 
 	return nil
@@ -57,9 +56,9 @@ func (r *subsRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscript
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errkit.WrapErr(opGetByID, repos.KindNotFound, err)
+			return nil, repos.WrapErr(opGetByID, repos.KindNotFound, err)
 		}
-		return nil, errkit.WrapErr(opGetByID, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opGetByID, repos.KindUnknown, err)
 	}
 
 	return sub, nil
@@ -70,17 +69,17 @@ func (r *subsRepo) Update(ctx context.Context, sub *domain.Subscription) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return errkit.WrapErr(opUpdate, repos.KindDuplicate, err)
+			return repos.WrapErr(opUpdate, repos.KindDuplicate, err)
 		}
-		return errkit.WrapErr(opUpdate, repos.KindUnknown, err)
+		return repos.WrapErr(opUpdate, repos.KindUnknown, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return errkit.WrapErr(opUpdate, repos.KindUnknown, err)
+		return repos.WrapErr(opUpdate, repos.KindUnknown, err)
 	}
 	if rowsAffected == 0 {
-		return errkit.NewErr(opUpdate, repos.KindNotFound)
+		return repos.NewErr(opUpdate, repos.KindNotFound)
 	}
 
 	return nil
@@ -89,15 +88,15 @@ func (r *subsRepo) Update(ctx context.Context, sub *domain.Subscription) error {
 func (r *subsRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	res, err := r.db.ExecContext(ctx, deleteQuery, id)
 	if err != nil {
-		return errkit.WrapErr(opDelete, repos.KindUnknown, err)
+		return repos.WrapErr(opDelete, repos.KindUnknown, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return errkit.WrapErr(opDelete, repos.KindUnknown, err)
+		return repos.WrapErr(opDelete, repos.KindUnknown, err)
 	}
 	if rowsAffected == 0 {
-		return errkit.NewErr(opDelete, repos.KindNotFound)
+		return repos.NewErr(opDelete, repos.KindNotFound)
 	}
 
 	return nil
@@ -109,12 +108,12 @@ func (r *subsRepo) List(
 ) ([]domain.Subscription, error) {
 	query, args, err := r.buildListQuery(filter)
 	if err != nil {
-		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
 	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
 	}
 	defer rows.Close()
 
@@ -125,13 +124,13 @@ func (r *subsRepo) List(
 			&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
 			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
 		); err != nil {
-			return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+			return nil, repos.WrapErr(opList, repos.KindUnknown, err)
 		}
 		subs = append(subs, sub)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, errkit.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
 	}
 
 	return subs, nil
