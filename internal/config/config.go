@@ -17,7 +17,14 @@ func init() {
 
 type Config struct {
 	PostgresCfg PostgresCfg `yaml:"postgres"`
+	RepoCfg     RepoConfig  `yaml:"repository"`
 }
+
+type RepoConfig struct {
+	DefaultPageSize int `yaml:"default_page_size" env:"REPO_DEFAULT_PAGE_SIZE" env-default:"10"`
+	MaxPageSize     int `yaml:"max_page_size" env:"REPO_MAX_PAGE_SIZE" env-default:"100"`
+}
+
 
 type PostgresCfg struct {
 	User     string `yaml:"user" env:"PG_USER" env-default:"user"`
