@@ -25,7 +25,6 @@ type RepoConfig struct {
 	MaxPageSize     int `yaml:"max_page_size" env:"REPO_MAX_PAGE_SIZE" env-default:"100"`
 }
 
-
 type PostgresCfg struct {
 	User     string `yaml:"user" env:"PG_USER" env-default:"user"`
 	Password string `yaml:"password" env:"PG_PASSWORD" env-default:"password"`

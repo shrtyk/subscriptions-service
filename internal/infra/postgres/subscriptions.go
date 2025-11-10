@@ -22,11 +22,11 @@ const (
 )
 
 type subsRepo struct {
-	db  *sql.DB
+	db  DBTX
 	cfg *config.RepoConfig
 }
 
-func NewSubsRepo(db *sql.DB, cfg *config.RepoConfig) *subsRepo {
+func NewSubsRepo(db DBTX, cfg *config.RepoConfig) *subsRepo {
 	return &subsRepo{
 		db:  db,
 		cfg: cfg,
@@ -34,7 +34,10 @@ func NewSubsRepo(db *sql.DB, cfg *config.RepoConfig) *subsRepo {
 }
 
 func (r *subsRepo) Create(ctx context.Context, sub *domain.Subscription) error {
-	_, err := r.db.ExecContext(ctx, createQuery, sub.ID, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate)
+	err := r.db.QueryRowContext(
+		ctx, createQuery, sub.ServiceName,
+		sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
+		Scan(&sub.ID, &sub.CreatedAt, &sub.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

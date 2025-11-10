@@ -20,7 +20,7 @@ import (
 	"github.com/shrtyk/subscriptions-service/pkg/errkit"
 )
 
-func newTestRepo(t *testing.T) (*subsRepo, sqlmock.Sqlmock) {
+func setup(t *testing.T) (*subsRepo, sqlmock.Sqlmock) {
 	t.Helper()
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	require.NoError(t, err)
@@ -43,7 +43,6 @@ func TestSubsRepo_Create(t *testing.T) {
 	ctx := context.Background()
 
 	sub := &domain.Subscription{
-		ID:          uuid.New(),
 		ServiceName: "Test Service",
 		MonthlyCost: 100,
 		UserID:      uuid.New(),
@@ -51,33 +50,41 @@ func TestSubsRepo_Create(t *testing.T) {
 	}
 
 	dbErr := errors.New("generic DB error")
+	generatedID := uuid.New()
+	generatedTime := time.Now()
 
 	testCases := []struct {
 		name        string
 		setupMock   func(mock sqlmock.Sqlmock, sub *domain.Subscription)
-		assertFunc  func(t *testing.T, err error)
+		assertFunc  func(t *testing.T, err error, sub *domain.Subscription)
 		expectedErr error
 	}{
 		{
 			name: "Success",
 			setupMock: func(mock sqlmock.Sqlmock, sub *domain.Subscription) {
-				mock.ExpectExec(createQuery).
-					WithArgs(sub.ID, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
-					WillReturnResult(sqlmock.NewResult(1, 1))
+				rows := sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
+					AddRow(generatedID, generatedTime, generatedTime)
+
+				mock.ExpectQuery(createQuery).
+					WithArgs(sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
+					WillReturnRows(rows)
 			},
-			assertFunc: func(t *testing.T, err error) {
-				assert.NoError(t, err)
+			assertFunc: func(t *testing.T, err error, sub *domain.Subscription) {
+				require.NoError(t, err)
+				assert.Equal(t, generatedID, sub.ID)
+				assert.Equal(t, generatedTime, sub.CreatedAt)
+				assert.Equal(t, generatedTime, sub.UpdatedAt)
 			},
 		},
 		{
 			name: "Duplicate",
 			setupMock: func(mock sqlmock.Sqlmock, sub *domain.Subscription) {
 				pgErr := &pgconn.PgError{Code: "23505"}
-				mock.ExpectExec(createQuery).
-					WithArgs(sub.ID, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
+				mock.ExpectQuery(createQuery).
+					WithArgs(sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
 					WillReturnError(pgErr)
 			},
-			assertFunc: func(t *testing.T, err error) {
+			assertFunc: func(t *testing.T, err error, sub *domain.Subscription) {
 				var baseErr *errkit.BaseErr[repos.RepoKind]
 				require.ErrorAs(t, err, &baseErr)
 				assert.Equal(t, repos.KindDuplicate, baseErr.Kind)
@@ -86,11 +93,11 @@ func TestSubsRepo_Create(t *testing.T) {
 		{
 			name: "Generic DB Error",
 			setupMock: func(mock sqlmock.Sqlmock, sub *domain.Subscription) {
-				mock.ExpectExec(createQuery).
-					WithArgs(sub.ID, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
+				mock.ExpectQuery(createQuery).
+					WithArgs(sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
 					WillReturnError(dbErr)
 			},
-			assertFunc: func(t *testing.T, err error) {
+			assertFunc: func(t *testing.T, err error, sub *domain.Subscription) {
 				var baseErr *errkit.BaseErr[repos.RepoKind]
 				require.ErrorAs(t, err, &baseErr)
 				assert.Equal(t, repos.KindUnknown, baseErr.Kind)
@@ -102,10 +109,10 @@ func TestSubsRepo_Create(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo, mock := newTestRepo(t)
+			repo, mock := setup(t)
 			tc.setupMock(mock, sub)
 			err := repo.Create(ctx, sub)
-			tc.assertFunc(t, err)
+			tc.assertFunc(t, err, sub)
 		})
 	}
 }
@@ -176,7 +183,7 @@ func TestSubsRepo_GetByID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo, mock := newTestRepo(t)
+			repo, mock := setup(t)
 			tc.setupMock(mock, tc.subID)
 			sub, err := repo.GetByID(ctx, tc.subID)
 			tc.assertFunc(t, sub, err)
@@ -267,7 +274,7 @@ func TestSubsRepo_Update(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo, mock := newTestRepo(t)
+			repo, mock := setup(t)
 			tc.setupMock(mock, tc.sub)
 			err := repo.Update(ctx, tc.sub)
 			tc.assertFunc(t, err)
@@ -334,7 +341,7 @@ func TestSubsRepo_Delete(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo, mock := newTestRepo(t)
+			repo, mock := setup(t)
 			tc.setupMock(mock, tc.subID)
 			err := repo.Delete(ctx, tc.subID)
 			tc.assertFunc(t, err)
@@ -343,7 +350,7 @@ func TestSubsRepo_Delete(t *testing.T) {
 }
 
 func TestSubsRepo_List(t *testing.T) {
-	repo, mock := newTestRepo(t)
+	repo, mock := setup(t)
 	ctx := context.Background()
 
 	userID := uuid.New()

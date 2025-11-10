@@ -7,8 +7,9 @@ import (
 
 const (
 	createQuery = `
-		INSERT INTO subscriptions (id, service_name, monthly_cost, user_id, start_date, end_date)
-		VALUES ($1, $2, $3, $4, $5, $6);
+		INSERT INTO subscriptions (service_name, monthly_cost, user_id, start_date, end_date)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at;
 	`
 
 	getByIDQuery = `

@@ -5,21 +5,17 @@ import (
 	"fmt"
 )
 
-type Stringer interface {
-	String() string
-}
-
-type BaseErr[T Stringer] struct {
+type BaseErr[T fmt.Stringer] struct {
 	Op   string
 	Kind T
 	Err  error
 }
 
-func WrapErr[T Stringer](op string, kind T, err error) error {
+func WrapErr[T fmt.Stringer](op string, kind T, err error) error {
 	return &BaseErr[T]{Op: op, Kind: kind, Err: err}
 }
 
-func NewErr[T Stringer](op string, kind T) error {
+func NewErr[T fmt.Stringer](op string, kind T) error {
 	return &BaseErr[T]{Op: op, Kind: kind, Err: errors.New(kind.String())}
 }
 
