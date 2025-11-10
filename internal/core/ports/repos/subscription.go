@@ -7,6 +7,7 @@ import (
 	"github.com/shrtyk/subscriptions-service/internal/core/domain"
 )
 
+//go:generate mockery
 type SubscriptionRepository interface {
 	Create(ctx context.Context, sub *domain.Subscription) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error)
