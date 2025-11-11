@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -16,8 +17,23 @@ func init() {
 }
 
 type Config struct {
+	AppCfg      AppCfg      `yaml:"app"`
+	HttpCfg     HttpCfg     `yaml:"http_server"`
 	PostgresCfg PostgresCfg `yaml:"postgres"`
 	RepoCfg     RepoConfig  `yaml:"repository"`
+}
+
+type AppCfg struct {
+	Env             string        `yaml:"env" env:"APP_ENV" env-default:"dev"` // One of: "dev", "staging", "prod"
+	Timeout         time.Duration `yaml:"timeout" env:"APP_TIMEOUT" env-default:"5s"`
+	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"APP_SHUTDOWN_TIMEOUT" env-default:"10s"`
+}
+
+type HttpCfg struct {
+	Port         string        `yaml:"port" env:"HTTP_SERVER_PORT" env-default:"8080"`
+	IdleTimeout  time.Duration `yaml:"idle_timeout" env:"HTTP_SERVER_IDLE_TIMEOUT" env-default:"5s"`
+	WriteTimeout time.Duration `yaml:"write_timeout" env:"HTTP_SERVER_WRITE_TIMEOUT" env-default:"10s"`
+	ReadTimeout  time.Duration `yaml:"read_timeout" env:"HTTP_SERVER_READ_TIMEOUT" env-default:"10s"`
 }
 
 type RepoConfig struct {
@@ -54,6 +70,8 @@ func MustInitConfig() *Config {
 		panic(fmt.Sprintf("failed to read environment variables: %s", err))
 	}
 
+	validateCfg(cfg)
+
 	return cfg
 }
 
@@ -67,4 +85,11 @@ func cfgPath() string {
 	}
 
 	return path
+}
+
+func validateCfg(cfg *Config) {
+	allowedEnvs := []string{"dev", "staging", "prod"}
+	if !slices.Contains(allowedEnvs, cfg.AppCfg.Env) {
+		panic(fmt.Sprintf("wrong environment: environment should be one of: %v", allowedEnvs))
+	}
 }
