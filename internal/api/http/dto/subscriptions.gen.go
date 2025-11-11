@@ -51,6 +51,12 @@ type Subscription struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// TotalCost defines model for TotalCost.
+type TotalCost struct {
+	// TotalCost Total cost of subscriptions
+	TotalCost *int `json:"total_cost,omitempty"`
+}
+
 // UpdateSubscription defines model for UpdateSubscription.
 type UpdateSubscription struct {
 	// EndDate New end month and year (MM-YYYY). Use null to remove the end date.

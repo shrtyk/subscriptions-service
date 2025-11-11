@@ -255,11 +255,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  total_cost:
-                    type: integer
-                    description: The total calculated cost in rubles.
+                $ref: "#/components/schemas/TotalCost"
         "400":
           description: Bad request, for example, missing user_id or service_name when required.
         default:
@@ -352,6 +348,14 @@ components:
           pattern: "^(0[1-9]|1[0-2])-(19|20)\\d{2}$"
           nullable: true
           example: "11-2027"
+
+    TotalCost:
+      type: object
+      properties:
+        total_cost:
+          type: integer
+          description: Total cost of subscriptions
+          example: 10000
 
     Error:
       type: object
