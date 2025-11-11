@@ -39,6 +39,10 @@ func setup(t *testing.T) (*subsRepo, sqlmock.Sqlmock) {
 	return repo, mock
 }
 
+func ptr[T any](value T) *T {
+	return &value
+}
+
 func TestSubsRepo_Create(t *testing.T) {
 	ctx := context.Background()
 
@@ -356,10 +360,6 @@ func TestSubsRepo_List(t *testing.T) {
 	userID := uuid.New()
 	serviceName := "Test Service"
 
-	ptrUUID := func(u uuid.UUID) *uuid.UUID { return &u }
-	ptrStr := func(s string) *string { return &s }
-	ptrInt := func(i int) *int { return &i }
-
 	mockCols := []string{"id", "service_name", "monthly_cost", "user_id", "start_date", "end_date", "created_at", "updated_at"}
 
 	testCases := []struct {
@@ -379,42 +379,42 @@ func TestSubsRepo_List(t *testing.T) {
 		},
 		{
 			name:         "Filter by UserID",
-			filter:       domain.SubscriptionFilter{UserID: ptrUUID(userID)},
+			filter:       domain.SubscriptionFilter{UserID: ptr(userID)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE user_id = $1 LIMIT 10 OFFSET 0",
 			expectedArgs: []any{userID},
 			mockRows:     sqlmock.NewRows(mockCols).AddRow(uuid.New(), serviceName, 100, userID, time.Now(), nil, time.Now(), time.Now()),
 		},
 		{
 			name:         "Filter by ServiceName",
-			filter:       domain.SubscriptionFilter{ServiceName: ptrStr(serviceName)},
+			filter:       domain.SubscriptionFilter{ServiceName: ptr(serviceName)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE service_name = $1 LIMIT 10 OFFSET 0",
 			expectedArgs: []any{serviceName},
 			mockRows:     sqlmock.NewRows(mockCols),
 		},
 		{
 			name:         "Filter by UserID and ServiceName",
-			filter:       domain.SubscriptionFilter{UserID: ptrUUID(userID), ServiceName: ptrStr(serviceName)},
+			filter:       domain.SubscriptionFilter{UserID: ptr(userID), ServiceName: ptr(serviceName)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE user_id = $1 AND service_name = $2 LIMIT 10 OFFSET 0",
 			expectedArgs: []any{userID, serviceName},
 			mockRows:     sqlmock.NewRows(mockCols),
 		},
 		{
 			name:         "Custom Page and PageSize",
-			filter:       domain.SubscriptionFilter{Page: ptrInt(3), PageSize: ptrInt(20)},
+			filter:       domain.SubscriptionFilter{Page: ptr(3), PageSize: ptr(20)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions LIMIT 20 OFFSET 40",
 			expectedArgs: []any{},
 			mockRows:     sqlmock.NewRows(mockCols),
 		},
 		{
 			name:         "PageSize exceeds MaxPageSize",
-			filter:       domain.SubscriptionFilter{PageSize: ptrInt(200)},
+			filter:       domain.SubscriptionFilter{PageSize: ptr(200)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions LIMIT 100 OFFSET 0",
 			expectedArgs: []any{},
 			mockRows:     sqlmock.NewRows(mockCols),
 		},
 		{
 			name:         "Page 1 with custom PageSize",
-			filter:       domain.SubscriptionFilter{Page: ptrInt(1), PageSize: ptrInt(5)},
+			filter:       domain.SubscriptionFilter{Page: ptr(1), PageSize: ptr(5)},
 			expectedSQL:  "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions LIMIT 5 OFFSET 0",
 			expectedArgs: []any{},
 			mockRows:     sqlmock.NewRows(mockCols),
@@ -450,6 +450,93 @@ func TestSubsRepo_List(t *testing.T) {
 				assert.Nil(t, subs)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSubsRepo_ListAll(t *testing.T) {
+	repo, mock := setup(t)
+	ctx := context.Background()
+
+	userID := uuid.New()
+	serviceName := "Test Service"
+
+	mockCols := []string{"id", "service_name", "monthly_cost", "user_id", "start_date", "end_date", "created_at", "updated_at"}
+
+	testCases := []struct {
+		name        string
+		filter      domain.SubscriptionFilter
+		expectedSQL string
+		mockRows    *sqlmock.Rows
+		mockErr     error
+	}{
+		{
+			name:        "Success - No filter",
+			filter:      domain.SubscriptionFilter{},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions",
+			mockRows:    sqlmock.NewRows(mockCols),
+		},
+		{
+			name:        "Success - Filter by UserID",
+			filter:      domain.SubscriptionFilter{UserID: ptr(userID)},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE user_id = $1",
+			mockRows:    sqlmock.NewRows(mockCols),
+		},
+		{
+			name:        "Success - Filter by ServiceName",
+			filter:      domain.SubscriptionFilter{ServiceName: ptr(serviceName)},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE service_name = $1",
+			mockRows:    sqlmock.NewRows(mockCols),
+		},
+		{
+			name:        "Success - Filter by UserID and ServiceName",
+			filter:      domain.SubscriptionFilter{UserID: ptr(userID), ServiceName: ptr(serviceName)},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions WHERE user_id = $1 AND service_name = $2",
+			mockRows:    sqlmock.NewRows(mockCols),
+		},
+		{
+			name:        "DB Query Error",
+			filter:      domain.SubscriptionFilter{},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions",
+			mockErr:     errors.New("db query error"),
+		},
+		{
+			name:        "Scan Error",
+			filter:      domain.SubscriptionFilter{},
+			expectedSQL: "SELECT id, service_name, monthly_cost, user_id, start_date, end_date, created_at, updated_at FROM subscriptions",
+			mockRows:    sqlmock.NewRows([]string{"id"}).AddRow("not-a-uuid"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var expectedArgs []driver.Value
+			if tc.filter.UserID != nil {
+				expectedArgs = append(expectedArgs, *tc.filter.UserID)
+			}
+			if tc.filter.ServiceName != nil {
+				expectedArgs = append(expectedArgs, *tc.filter.ServiceName)
+			}
+
+			query := mock.ExpectQuery(tc.expectedSQL).WithArgs(expectedArgs...)
+
+			if tc.mockErr != nil {
+				query.WillReturnError(tc.mockErr)
+			} else {
+				query.WillReturnRows(tc.mockRows)
+			}
+
+			subs, err := repo.ListAll(ctx, tc.filter)
+
+			if tc.mockErr != nil || tc.name == "Scan Error" {
+				var baseErr *errkit.BaseErr[repos.RepoKind]
+				require.ErrorAs(t, err, &baseErr)
+				assert.Equal(t, repos.KindUnknown, baseErr.Kind)
+				assert.Nil(t, subs)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, subs)
 			}
 		})
 	}
