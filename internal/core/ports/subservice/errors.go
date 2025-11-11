@@ -6,15 +6,12 @@ type ServiceKind int
 
 const (
 	KindUnknown ServiceKind = iota
-	KindValidation
 	KindBusinessLogic
 	KindNotFound
 )
 
 func (k ServiceKind) String() string {
 	switch k {
-	case KindValidation:
-		return "Validation"
 	case KindBusinessLogic:
 		return "BusinessLogic"
 	case KindNotFound:
