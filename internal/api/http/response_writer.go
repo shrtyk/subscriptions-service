@@ -9,6 +9,12 @@ import (
 	"github.com/shrtyk/subscriptions-service/pkg/log"
 )
 
+type HttpResponse[T any] struct {
+	Success bool   `json:"success,omitempty"`
+	Message string `json:"message,omitempty"`
+	Body    T      `json:"data,omitempty"`
+}
+
 type customResponseWriter struct {
 	http.ResponseWriter
 	statusCode  int
