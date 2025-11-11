@@ -203,22 +203,31 @@ func TestService_Delete(t *testing.T) {
 func TestService_Update(t *testing.T) {
 	ctx := context.Background()
 	subID := uuid.New()
-	subToUpdate := domain.Subscription{ID: subID, ServiceName: "New Name"}
 	repoErrNotFound := errkit.WrapErr("op", repos.KindNotFound, errors.New("not found"))
 	repoErrDuplicate := errkit.WrapErr("op", repos.KindDuplicate, errors.New("duplicate value"))
 
+	strPtr := func(s string) *string { return &s }
+	intPtr := func(i int) *int { return &i }
+	timePtr := func(t time.Time) *time.Time { return &t }
+
 	testCases := []struct {
-		name       string
-		setupMocks func(bundle serviceTestBundle)
-		assertFunc func(t *testing.T, sub *domain.Subscription, err error)
+		name        string
+		update      domain.SubscriptionUpdate
+		existingSub *domain.Subscription
+		setupMocks  func(bundle serviceTestBundle, existingSub *domain.Subscription)
+		assertFunc  func(t *testing.T, sub *domain.Subscription, err error)
 	}{
 		{
-			name: "Success",
-			setupMocks: func(bundle serviceTestBundle) {
-				existingSub := &domain.Subscription{ID: subID, ServiceName: "Old Name"}
+			name: "Success - Full Update",
+			update: domain.SubscriptionUpdate{
+				ServiceName: strPtr("New Name"),
+				MonthlyCost: intPtr(200),
+				EndDate:     timePtr(time.Now().Add(24 * time.Hour)),
+			},
+			existingSub: &domain.Subscription{ID: subID, ServiceName: "Old Name", MonthlyCost: 100},
+			setupMocks: func(bundle serviceTestBundle, existingSub *domain.Subscription) {
 				bundle.repo.On("GetByID", ctx, subID).Return(existingSub, nil).Once()
 				bundle.repo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil).Once()
-
 				bundle.txProvider.On("WithTransaction", ctx, mock.Anything).
 					Return(func(ctx context.Context, fn func(uow tx.UnitOfWork) error) error {
 						uowMock := txmocks.NewMockUnitOfWork(t)
@@ -230,13 +239,36 @@ func TestService_Update(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, sub)
 				assert.Equal(t, "New Name", sub.ServiceName)
+				assert.Equal(t, 200, sub.MonthlyCost)
+				assert.NotNil(t, sub.EndDate)
 			},
 		},
 		{
-			name: "GetByID returns Not Found",
-			setupMocks: func(bundle serviceTestBundle) {
+			name:        "Success - Clear EndDate",
+			update:      domain.SubscriptionUpdate{ClearEndDate: true},
+			existingSub: &domain.Subscription{ID: subID, ServiceName: "Old Name", EndDate: timePtr(time.Now())},
+			setupMocks: func(bundle serviceTestBundle, existingSub *domain.Subscription) {
+				bundle.repo.On("GetByID", ctx, subID).Return(existingSub, nil).Once()
+				bundle.repo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil).Once()
+				bundle.txProvider.On("WithTransaction", ctx, mock.Anything).
+					Return(func(ctx context.Context, fn func(uow tx.UnitOfWork) error) error {
+						uowMock := txmocks.NewMockUnitOfWork(t)
+						uowMock.On("Subscriptions").Return(bundle.repo)
+						return fn(uowMock)
+					}).Once()
+			},
+			assertFunc: func(t *testing.T, sub *domain.Subscription, err error) {
+				require.NoError(t, err)
+				assert.NotNil(t, sub)
+				assert.Nil(t, sub.EndDate)
+			},
+		},
+		{
+			name:        "GetByID returns Not Found",
+			update:      domain.SubscriptionUpdate{ServiceName: strPtr("New Name")},
+			existingSub: nil,
+			setupMocks: func(bundle serviceTestBundle, existingSub *domain.Subscription) {
 				bundle.repo.On("GetByID", ctx, subID).Return(nil, repoErrNotFound).Once()
-
 				bundle.txProvider.On("WithTransaction", ctx, mock.Anything).
 					Return(func(ctx context.Context, fn func(uow tx.UnitOfWork) error) error {
 						uowMock := txmocks.NewMockUnitOfWork(t)
@@ -253,12 +285,12 @@ func TestService_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "Update returns Duplicate",
-			setupMocks: func(bundle serviceTestBundle) {
-				existingSub := &domain.Subscription{ID: subID, ServiceName: "Old Name"}
+			name:        "Update returns Duplicate",
+			update:      domain.SubscriptionUpdate{ServiceName: strPtr("Duplicate Name")},
+			existingSub: &domain.Subscription{ID: subID, ServiceName: "Old Name"},
+			setupMocks: func(bundle serviceTestBundle, existingSub *domain.Subscription) {
 				bundle.repo.On("GetByID", ctx, subID).Return(existingSub, nil).Once()
 				bundle.repo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(repoErrDuplicate).Once()
-
 				bundle.txProvider.On("WithTransaction", ctx, mock.Anything).
 					Return(func(ctx context.Context, fn func(uow tx.UnitOfWork) error) error {
 						uowMock := txmocks.NewMockUnitOfWork(t)
@@ -279,8 +311,8 @@ func TestService_Update(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			bundle := setup(t)
-			tc.setupMocks(bundle)
-			updatedSub, err := bundle.svc.Update(ctx, subToUpdate)
+			tc.setupMocks(bundle, tc.existingSub)
+			updatedSub, err := bundle.svc.Update(ctx, subID, tc.update)
 			tc.assertFunc(t, updatedSub, err)
 		})
 	}

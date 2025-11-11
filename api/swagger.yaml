@@ -47,6 +47,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Subscription"
+        "400":
+          description: Bad request (like invalid format for query parameters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           description: Unexpected error
           content:
@@ -77,6 +83,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subscription"
+        "400":
+          description: Bad request (like malformed JSON)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unprocessable entity (like validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           description: Unexpected error
           content:
@@ -105,6 +123,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subscription"
+        "400":
+          description: Bad request (like invalid ID format)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Subscription not found
         default:
@@ -131,13 +155,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NewSubscription"
+              $ref: "#/components/schemas/UpdateSubscription"
             example:
-              service_name: "Yandex Plus"
-              monthly_cost: 999
-              user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-              start_date: "01-2024"
-              end_date: null
+              service_name: "Yandex Plus Ultimate"
+              monthly_cost: 599
       responses:
         "200":
           description: Subscription updated successfully
@@ -145,6 +166,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subscription"
+        "400":
+          description: Bad request (like invalid ID format, malformed JSON)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unprocessable entity (like validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Subscription not found
         default:
@@ -169,6 +202,12 @@ paths:
       responses:
         "204":
           description: Subscription deleted successfully
+        "400":
+          description: Bad request (like invalid ID format)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Subscription not found
         default:
@@ -295,6 +334,24 @@ components:
         - monthly_cost
         - user_id
         - start_date
+
+    UpdateSubscription:
+      type: object
+      properties:
+        service_name:
+          type: string
+          description: New name of the service.
+          example: "Yandex Plus Ultimate"
+        monthly_cost:
+          type: integer
+          description: New monthly cost in rubles.
+          example: 599
+        end_date:
+          type: string
+          description: New end month and year (MM-YYYY). Use null to remove the end date.
+          pattern: "^(0[1-9]|1[0-2])-(19|20)\\d{2}$"
+          nullable: true
+          example: "11-2027"
 
     Error:
       type: object

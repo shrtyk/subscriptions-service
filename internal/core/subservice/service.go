@@ -59,21 +59,27 @@ func (s *service) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscripti
 	return sub, nil
 }
 
-func (s *service) Update(ctx context.Context, sub domain.Subscription) (*domain.Subscription, error) {
+func (s *service) Update(ctx context.Context, id uuid.UUID, update domain.SubscriptionUpdate) (*domain.Subscription, error) {
 	var updatedSub *domain.Subscription
 	err := s.txProvider.WithTransaction(ctx, func(uow tx.UnitOfWork) error {
 		repo := uow.Subscriptions()
 
-		existing, err := repo.GetByID(ctx, sub.ID)
+		existing, err := repo.GetByID(ctx, id)
 		if err != nil {
 			return err
 		}
 
-		existing.ServiceName = sub.ServiceName
-		existing.MonthlyCost = sub.MonthlyCost
-		existing.UserID = sub.UserID
-		existing.StartDate = sub.StartDate
-		existing.EndDate = sub.EndDate
+		if update.ServiceName != nil {
+			existing.ServiceName = *update.ServiceName
+		}
+		if update.MonthlyCost != nil {
+			existing.MonthlyCost = *update.MonthlyCost
+		}
+		if update.ClearEndDate {
+			existing.EndDate = nil
+		} else if update.EndDate != nil {
+			existing.EndDate = update.EndDate
+		}
 		existing.UpdatedAt = time.Now().UTC()
 
 		if err := repo.Update(ctx, existing); err != nil {

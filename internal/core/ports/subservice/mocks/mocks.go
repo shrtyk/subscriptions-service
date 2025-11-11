@@ -380,8 +380,8 @@ func (_c *MockSubscriptionsService_TotalCost_Call) RunAndReturn(run func(ctx con
 }
 
 // Update provides a mock function for the type MockSubscriptionsService
-func (_mock *MockSubscriptionsService) Update(ctx context.Context, sub domain.Subscription) (*domain.Subscription, error) {
-	ret := _mock.Called(ctx, sub)
+func (_mock *MockSubscriptionsService) Update(ctx context.Context, id uuid.UUID, update domain.SubscriptionUpdate) (*domain.Subscription, error) {
+	ret := _mock.Called(ctx, id, update)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
@@ -389,18 +389,18 @@ func (_mock *MockSubscriptionsService) Update(ctx context.Context, sub domain.Su
 
 	var r0 *domain.Subscription
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, domain.Subscription) (*domain.Subscription, error)); ok {
-		return returnFunc(ctx, sub)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, domain.SubscriptionUpdate) (*domain.Subscription, error)); ok {
+		return returnFunc(ctx, id, update)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, domain.Subscription) *domain.Subscription); ok {
-		r0 = returnFunc(ctx, sub)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, domain.SubscriptionUpdate) *domain.Subscription); ok {
+		r0 = returnFunc(ctx, id, update)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.Subscription)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, domain.Subscription) error); ok {
-		r1 = returnFunc(ctx, sub)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, domain.SubscriptionUpdate) error); ok {
+		r1 = returnFunc(ctx, id, update)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -414,24 +414,30 @@ type MockSubscriptionsService_Update_Call struct {
 
 // Update is a helper method to define mock.On call
 //   - ctx context.Context
-//   - sub domain.Subscription
-func (_e *MockSubscriptionsService_Expecter) Update(ctx interface{}, sub interface{}) *MockSubscriptionsService_Update_Call {
-	return &MockSubscriptionsService_Update_Call{Call: _e.mock.On("Update", ctx, sub)}
+//   - id uuid.UUID
+//   - update domain.SubscriptionUpdate
+func (_e *MockSubscriptionsService_Expecter) Update(ctx interface{}, id interface{}, update interface{}) *MockSubscriptionsService_Update_Call {
+	return &MockSubscriptionsService_Update_Call{Call: _e.mock.On("Update", ctx, id, update)}
 }
 
-func (_c *MockSubscriptionsService_Update_Call) Run(run func(ctx context.Context, sub domain.Subscription)) *MockSubscriptionsService_Update_Call {
+func (_c *MockSubscriptionsService_Update_Call) Run(run func(ctx context.Context, id uuid.UUID, update domain.SubscriptionUpdate)) *MockSubscriptionsService_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 domain.Subscription
+		var arg1 uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(domain.Subscription)
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 domain.SubscriptionUpdate
+		if args[2] != nil {
+			arg2 = args[2].(domain.SubscriptionUpdate)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -442,7 +448,7 @@ func (_c *MockSubscriptionsService_Update_Call) Return(subscription *domain.Subs
 	return _c
 }
 
-func (_c *MockSubscriptionsService_Update_Call) RunAndReturn(run func(ctx context.Context, sub domain.Subscription) (*domain.Subscription, error)) *MockSubscriptionsService_Update_Call {
+func (_c *MockSubscriptionsService_Update_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID, update domain.SubscriptionUpdate) (*domain.Subscription, error)) *MockSubscriptionsService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

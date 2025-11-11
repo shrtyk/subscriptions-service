@@ -16,3 +16,10 @@ type Subscription struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+type SubscriptionUpdate struct {
+	ServiceName  *string
+	MonthlyCost  *int
+	EndDate      *time.Time
+	ClearEndDate bool // Flag to determine meaning of EndDate nil value (could mean 'delete' or 'do not update')
+}

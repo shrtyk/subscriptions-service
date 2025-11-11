@@ -51,6 +51,18 @@ type Subscription struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// UpdateSubscription defines model for UpdateSubscription.
+type UpdateSubscription struct {
+	// EndDate New end month and year (MM-YYYY). Use null to remove the end date.
+	EndDate *string `json:"end_date"`
+
+	// MonthlyCost New monthly cost in rubles.
+	MonthlyCost *int `json:"monthly_cost,omitempty"`
+
+	// ServiceName New name of the service.
+	ServiceName *string `json:"service_name,omitempty"`
+}
+
 // ListSubscriptionsParams defines parameters for ListSubscriptions.
 type ListSubscriptionsParams struct {
 	// UserId Filter by user ID
@@ -85,7 +97,7 @@ type GetTotalCostParams struct {
 type CreateSubscriptionJSONRequestBody = NewSubscription
 
 // UpdateSubscriptionJSONRequestBody defines body for UpdateSubscription for application/json ContentType.
-type UpdateSubscriptionJSONRequestBody = NewSubscription
+type UpdateSubscriptionJSONRequestBody = UpdateSubscription
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
