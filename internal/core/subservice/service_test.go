@@ -389,7 +389,7 @@ func TestService_TotalCost(t *testing.T) {
 		{
 			name: "Success",
 			setupMocks: func(bundle serviceTestBundle) {
-				bundle.repo.On("List", ctx, filter).Return(subs, nil).Once()
+				bundle.repo.On("ListAll", ctx, filter).Return(subs, nil).Once()
 			},
 			assertFunc: func(t *testing.T, cost int, err error) {
 				require.NoError(t, err)
@@ -397,9 +397,9 @@ func TestService_TotalCost(t *testing.T) {
 			},
 		},
 		{
-			name: "Repo List fails",
+			name: "Repo ListAll fails",
 			setupMocks: func(bundle serviceTestBundle) {
-				bundle.repo.On("List", ctx, filter).Return(nil, errors.New("db error")).Once()
+				bundle.repo.On("ListAll", ctx, filter).Return(nil, errors.New("db error")).Once()
 			},
 			assertFunc: func(t *testing.T, cost int, err error) {
 				require.Error(t, err)

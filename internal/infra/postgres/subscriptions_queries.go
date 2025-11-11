@@ -37,12 +37,7 @@ func (r *subsRepo) buildListQuery(filter domain.SubscriptionFilter) (string, []a
 		"start_date", "end_date", "created_at", "updated_at",
 	).From("subscriptions")
 
-	if filter.UserID != nil {
-		queryBuilder = queryBuilder.Where(squirrel.Eq{"user_id": *filter.UserID})
-	}
-	if filter.ServiceName != nil {
-		queryBuilder = queryBuilder.Where(squirrel.Eq{"service_name": *filter.ServiceName})
-	}
+	queryBuilder = applyFilter(queryBuilder, filter)
 
 	pageSize := uint64(r.cfg.DefaultPageSize)
 	if filter.PageSize != nil && *filter.PageSize > 0 {
@@ -62,4 +57,27 @@ func (r *subsRepo) buildListQuery(filter domain.SubscriptionFilter) (string, []a
 	queryBuilder = queryBuilder.Offset(offset)
 
 	return queryBuilder.ToSql()
+}
+
+func (r *subsRepo) buildListAllQuery(filter domain.SubscriptionFilter) (string, []any, error) {
+	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
+
+	queryBuilder := psql.Select(
+		"id", "service_name", "monthly_cost", "user_id",
+		"start_date", "end_date", "created_at", "updated_at",
+	).From("subscriptions")
+
+	queryBuilder = applyFilter(queryBuilder, filter)
+
+	return queryBuilder.ToSql()
+}
+
+func applyFilter(queryBuilder squirrel.SelectBuilder, filter domain.SubscriptionFilter) squirrel.SelectBuilder {
+	if filter.UserID != nil {
+		queryBuilder = queryBuilder.Where(squirrel.Eq{"user_id": *filter.UserID})
+	}
+	if filter.ServiceName != nil {
+		queryBuilder = queryBuilder.Where(squirrel.Eq{"service_name": *filter.ServiceName})
+	}
+	return queryBuilder
 }

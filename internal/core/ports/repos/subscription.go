@@ -14,4 +14,5 @@ type SubscriptionRepository interface {
 	Update(ctx context.Context, sub *domain.Subscription) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error)
+	ListAll(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error)
 }

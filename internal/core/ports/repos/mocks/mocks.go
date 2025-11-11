@@ -289,6 +289,74 @@ func (_c *MockSubscriptionRepository_List_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// ListAll provides a mock function for the type MockSubscriptionRepository
+func (_mock *MockSubscriptionRepository) ListAll(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error) {
+	ret := _mock.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAll")
+	}
+
+	var r0 []domain.Subscription
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, domain.SubscriptionFilter) ([]domain.Subscription, error)); ok {
+		return returnFunc(ctx, filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, domain.SubscriptionFilter) []domain.Subscription); ok {
+		r0 = returnFunc(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Subscription)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, domain.SubscriptionFilter) error); ok {
+		r1 = returnFunc(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSubscriptionRepository_ListAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAll'
+type MockSubscriptionRepository_ListAll_Call struct {
+	*mock.Call
+}
+
+// ListAll is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.SubscriptionFilter
+func (_e *MockSubscriptionRepository_Expecter) ListAll(ctx interface{}, filter interface{}) *MockSubscriptionRepository_ListAll_Call {
+	return &MockSubscriptionRepository_ListAll_Call{Call: _e.mock.On("ListAll", ctx, filter)}
+}
+
+func (_c *MockSubscriptionRepository_ListAll_Call) Run(run func(ctx context.Context, filter domain.SubscriptionFilter)) *MockSubscriptionRepository_ListAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 domain.SubscriptionFilter
+		if args[1] != nil {
+			arg1 = args[1].(domain.SubscriptionFilter)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionRepository_ListAll_Call) Return(subscriptions []domain.Subscription, err error) *MockSubscriptionRepository_ListAll_Call {
+	_c.Call.Return(subscriptions, err)
+	return _c
+}
+
+func (_c *MockSubscriptionRepository_ListAll_Call) RunAndReturn(run func(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error)) *MockSubscriptionRepository_ListAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type MockSubscriptionRepository
 func (_mock *MockSubscriptionRepository) Update(ctx context.Context, sub *domain.Subscription) error {
 	ret := _mock.Called(ctx, sub)

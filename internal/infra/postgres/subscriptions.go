@@ -18,6 +18,7 @@ const (
 	opUpdate  = "subsRepo.Update"
 	opDelete  = "subsRepo.Delete"
 	opList    = "subsRepo.List"
+	opFindAll = "subsRepo.FindAll"
 )
 
 type subsRepo struct {
@@ -106,14 +107,29 @@ func (r *subsRepo) List(
 	ctx context.Context,
 	filter domain.SubscriptionFilter,
 ) ([]domain.Subscription, error) {
-	query, args, err := r.buildListQuery(filter)
+	return r.listSubs(ctx, filter, r.buildListQuery)
+}
+
+func (r *subsRepo) ListAll(
+	ctx context.Context,
+	filter domain.SubscriptionFilter,
+) ([]domain.Subscription, error) {
+	return r.listSubs(ctx, filter, r.buildListAllQuery)
+}
+
+func (r *subsRepo) listSubs(
+	ctx context.Context,
+	filter domain.SubscriptionFilter,
+	queryBuilder func(domain.SubscriptionFilter) (string, []any, error),
+) ([]domain.Subscription, error) {
+	query, args, err := queryBuilder(filter)
 	if err != nil {
-		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
 	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
 	}
 	defer rows.Close()
 
@@ -124,13 +140,13 @@ func (r *subsRepo) List(
 			&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
 			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
 		); err != nil {
-			return nil, repos.WrapErr(opList, repos.KindUnknown, err)
+			return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
 		}
 		subs = append(subs, sub)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, repos.WrapErr(opList, repos.KindUnknown, err)
+		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
 	}
 
 	return subs, nil

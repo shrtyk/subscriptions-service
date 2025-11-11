@@ -126,7 +126,7 @@ func (s *service) List(ctx context.Context, filter domain.SubscriptionFilter) ([
 }
 
 func (s *service) TotalCost(ctx context.Context, filter domain.SubscriptionFilter, start, end time.Time) (int, error) {
-	subs, err := s.repo.List(ctx, filter)
+	subs, err := s.repo.ListAll(ctx, filter)
 	if err != nil {
 		return 0, subservice.WrapErr(opTotalCost, subservice.KindUnknown, err)
 	}
@@ -176,7 +176,8 @@ func calculateCostForSubscription(sub domain.Subscription, periodStart, periodEn
 		return 0
 	}
 
-	months := (billingEnd.Year()-billingStart.Year())*12 + int(billingEnd.Month()) - int(billingStart.Month()) + 1
+	months := (billingEnd.Year()-billingStart.Year())*12 +
+		int(billingEnd.Month()) - int(billingStart.Month()) + 1
 
 	return months * sub.MonthlyCost
 }
