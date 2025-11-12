@@ -82,6 +82,10 @@ func (s *service) Update(ctx context.Context, id uuid.UUID, update domain.Subscr
 		}
 		existing.UpdatedAt = time.Now().UTC()
 
+		if existing.EndDate != nil && existing.StartDate.After(*existing.EndDate) {
+			return subservice.WrapErr(opUpdate, subservice.KindBusinessLogic, errors.New("end_date cannot be before start_date"))
+		}
+
 		if err := repo.Update(ctx, existing); err != nil {
 			return err
 		}
@@ -98,6 +102,10 @@ func (s *service) Update(ctx context.Context, id uuid.UUID, update domain.Subscr
 			case repos.KindDuplicate:
 				return nil, subservice.WrapErr(opUpdate, subservice.KindBusinessLogic, err)
 			}
+		}
+		var serviceErr *errkit.BaseErr[subservice.ServiceKind]
+		if errors.As(err, &serviceErr) && serviceErr.Kind == subservice.KindBusinessLogic {
+			return nil, err
 		}
 		return nil, subservice.WrapErr(opUpdate, subservice.KindUnknown, err)
 	}
