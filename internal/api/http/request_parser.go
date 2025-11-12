@@ -13,9 +13,10 @@ import (
 	"github.com/tomasen/realip"
 )
 
+const maxRequestBodyBytes = 1_048_576
+
 func ReadJSON[T any](w http.ResponseWriter, r *http.Request, dst T) error {
-	maxBytes := 1_048_576
-	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodyBytes))
 
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()

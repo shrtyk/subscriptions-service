@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/shrtyk/subscriptions-service/internal/api/http/dto"
@@ -16,7 +17,13 @@ const (
 	invalidDateMsg           = "invalid date format, expected MM-YYYY"
 )
 
-func validateGetTotalCostParams(params dto.GetTotalCostParams) (time.Time, time.Time, *DTOValidationError) {
+type UpdateSubscriptionRequest struct {
+	ServiceName *string         `json:"service_name"`
+	MonthlyCost *int            `json:"monthly_cost"`
+	EndDate     json.RawMessage `json:"end_date"`
+}
+
+func validateGetTotalCostParams(params dto.GetTotalCostParams) (time.Time, time.Time, error) {
 	var start, end time.Time
 	var err error
 
@@ -54,7 +61,7 @@ func validateGetTotalCostParams(params dto.GetTotalCostParams) (time.Time, time.
 	return start, end, nil
 }
 
-func validateNewSubscription(d *dto.NewSubscription) (time.Time, *time.Time, *DTOValidationError) {
+func validateNewSubscription(d *dto.NewSubscription) (time.Time, *time.Time, error) {
 	startDate, err := dateLayout.parse(d.StartDate)
 	if err != nil {
 		return time.Time{}, nil, &DTOValidationError{
@@ -82,17 +89,23 @@ func validateNewSubscription(d *dto.NewSubscription) (time.Time, *time.Time, *DT
 	return startDate, endDate, nil
 }
 
-func validateUpdateSubscription(d *dto.UpdateSubscription) (*time.Time, *DTOValidationError) {
-	if d.EndDate == nil {
-		return nil, nil
+func validateUpdateSubscriptionRequest(req *UpdateSubscriptionRequest) (*time.Time, bool, error) {
+	if req.EndDate == nil {
+		return nil, false, nil
 	}
 
-	t, err := dateLayout.parse(*d.EndDate)
-	if err != nil {
-		return nil, &DTOValidationError{
-			ClientMessage: invalidDateMsg,
-			InternalError: err,
-		}
+	if string(req.EndDate) == "null" {
+		return nil, true, nil
 	}
-	return &t, nil
+
+	var endDateStr string
+	if err := json.Unmarshal(req.EndDate, &endDateStr); err != nil {
+		return nil, false, &DTOValidationError{ClientMessage: "invalid end_date format", InternalError: err}
+	}
+
+	t, err := dateLayout.parse(endDateStr)
+	if err != nil {
+		return nil, false, &DTOValidationError{ClientMessage: invalidDateMsg, InternalError: err}
+	}
+	return &t, false, nil
 }

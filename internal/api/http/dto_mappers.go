@@ -38,17 +38,20 @@ func fromNewSubscriptionDTO(d *dto.NewSubscription) (*domain.Subscription, error
 	}, nil
 }
 
-func fromUpdateSubscriptionDTO(d *dto.UpdateSubscription) (*domain.SubscriptionUpdate, error) {
-	endDate, err := validateUpdateSubscription(d)
+func fromUpdateSubscriptionRequest(req *UpdateSubscriptionRequest) (*domain.SubscriptionUpdate, error) {
+	endDate, clearEndDate, err := validateUpdateSubscriptionRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &domain.SubscriptionUpdate{
-		ServiceName: d.ServiceName,
-		MonthlyCost: d.MonthlyCost,
-		EndDate:     endDate,
-	}, nil
+	domainUpdate := &domain.SubscriptionUpdate{
+		ServiceName:  req.ServiceName,
+		MonthlyCost:  req.MonthlyCost,
+		EndDate:      endDate,
+		ClearEndDate: clearEndDate,
+	}
+
+	return domainUpdate, nil
 }
 
 func toListFilter(params dto.ListSubscriptionsParams) domain.SubscriptionFilter {

@@ -111,13 +111,13 @@ func (h *handler) GetSubscriptionById(w http.ResponseWriter, r *http.Request, id
 }
 
 func (h *handler) UpdateSubscription(w http.ResponseWriter, r *http.Request, id types.UUID) {
-	var body dto.UpdateSubscription
-	if err := ReadJSON(w, r, &body); err != nil {
+	var req UpdateSubscriptionRequest
+	if err := ReadJSON(w, r, &req); err != nil {
 		WriteHTTPError(w, r, BadRequestError(err))
 		return
 	}
 
-	domainUpdate, err := fromUpdateSubscriptionDTO(&body)
+	domainUpdate, err := fromUpdateSubscriptionRequest(&req)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 		return
