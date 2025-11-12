@@ -10,6 +10,7 @@ import (
 	"github.com/shrtyk/subscriptions-service/internal/config"
 	"github.com/shrtyk/subscriptions-service/internal/core/domain"
 	"github.com/shrtyk/subscriptions-service/internal/core/ports/repos"
+	"github.com/shrtyk/subscriptions-service/pkg/log"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 	opUpdate  = "subsRepo.Update"
 	opDelete  = "subsRepo.Delete"
 	opList    = "subsRepo.List"
-	opFindAll = "subsRepo.FindAll"
+	opListAll = "subsRepo.ListAll"
 )
 
 type subsRepo struct {
@@ -107,31 +108,36 @@ func (r *subsRepo) List(
 	ctx context.Context,
 	filter domain.SubscriptionFilter,
 ) ([]domain.Subscription, error) {
-	return r.listSubs(ctx, filter, r.buildListQuery)
+	return r.listSubs(ctx, filter, opList, r.buildListQuery)
 }
 
 func (r *subsRepo) ListAll(
 	ctx context.Context,
 	filter domain.SubscriptionFilter,
 ) ([]domain.Subscription, error) {
-	return r.listSubs(ctx, filter, r.buildListAllQuery)
+	return r.listSubs(ctx, filter, opListAll, r.buildListAllQuery)
 }
 
 func (r *subsRepo) listSubs(
 	ctx context.Context,
 	filter domain.SubscriptionFilter,
+	op string,
 	queryBuilder func(domain.SubscriptionFilter) (string, []any, error),
 ) ([]domain.Subscription, error) {
 	query, args, err := queryBuilder(filter)
 	if err != nil {
-		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
+		return nil, repos.WrapErr(op, repos.KindUnknown, err)
 	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
+		return nil, repos.WrapErr(op, repos.KindUnknown, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			log.FromCtx(ctx).Warn("failed to close sql.Rows", log.WithErr(cerr))
+		}
+	}()
 
 	subs := make([]domain.Subscription, 0)
 	for rows.Next() {
@@ -140,13 +146,13 @@ func (r *subsRepo) listSubs(
 			&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
 			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
 		); err != nil {
-			return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
+			return nil, repos.WrapErr(op, repos.KindUnknown, err)
 		}
 		subs = append(subs, sub)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, repos.WrapErr(opFindAll, repos.KindUnknown, err)
+		return nil, repos.WrapErr(op, repos.KindUnknown, err)
 	}
 
 	return subs, nil

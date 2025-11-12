@@ -32,8 +32,11 @@ func setup(t *testing.T) (*subsRepo, sqlmock.Sqlmock) {
 	repo := NewSubsRepo(db, &cfg)
 
 	t.Cleanup(func() {
+		mock.ExpectClose()
+		if cerr := db.Close(); cerr != nil {
+			assert.NoError(t, cerr)
+		}
 		assert.NoError(t, mock.ExpectationsWereMet())
-		db.Close()
 	})
 
 	return repo, mock
