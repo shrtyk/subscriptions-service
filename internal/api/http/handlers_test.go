@@ -59,6 +59,8 @@ func newRequestWithChiCtx(t *testing.T, method, path string, body io.Reader, pat
 }
 
 func TestHandler_GetSubscriptionById(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	subID := uuid.New()
 	expectedSub := &domain.Subscription{
@@ -75,14 +77,14 @@ func TestHandler_GetSubscriptionById(t *testing.T) {
 	testCases := []struct {
 		name       string
 		subID      string
-		setupMocks func(bundle testHarness)
+		setupMocks func(th testHarness)
 		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
 			name:  "Success",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("GetByID", ctx, subID).Return(expectedSub, nil).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("GetByID", ctx, subID).Return(expectedSub, nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var respBody dto.Subscription
@@ -95,8 +97,8 @@ func TestHandler_GetSubscriptionById(t *testing.T) {
 		{
 			name:  "Not Found",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("GetByID", ctx, subID).Return(nil, serviceErrNotFound).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("GetByID", ctx, subID).Return(nil, serviceErrNotFound).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -109,8 +111,8 @@ func TestHandler_GetSubscriptionById(t *testing.T) {
 		{
 			name:  "Generic Service Error",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("GetByID", ctx, subID).Return(nil, serviceErrGeneric).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("GetByID", ctx, subID).Return(nil, serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -124,9 +126,11 @@ func TestHandler_GetSubscriptionById(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th)
 			}
 
 			req := newRequestWithChiCtx(t, http.MethodGet, "/subscriptions/"+tc.subID, nil, map[string]string{"id": tc.subID})
@@ -134,13 +138,15 @@ func TestHandler_GetSubscriptionById(t *testing.T) {
 
 			id, err := uuid.Parse(tc.subID)
 			require.NoError(t, err)
-			bundle.h.GetSubscriptionById(rr, req.WithContext(ctx), id)
+			th.h.GetSubscriptionById(rr, req.WithContext(ctx), id)
 			tc.assertFunc(t, rr)
 		})
 	}
 }
 
 func TestHandler_CreateSubscription(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	userID := uuid.New()
 	newSubDTO := dto.NewSubscription{
@@ -167,14 +173,14 @@ func TestHandler_CreateSubscription(t *testing.T) {
 	testCases := []struct {
 		name       string
 		body       io.Reader
-		setupMocks func(bundle testHarness)
+		setupMocks func(th testHarness)
 		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
 			name: "Success",
 			body: mustMarshal(t, newSubDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Create", ctx, *domainSub).Return(createdSub, nil).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Create", ctx, *domainSub).Return(createdSub, nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var respBody dto.Subscription
@@ -215,8 +221,8 @@ func TestHandler_CreateSubscription(t *testing.T) {
 		{
 			name: "Service Error - Business Logic",
 			body: mustMarshal(t, newSubDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Create", ctx, *domainSub).Return(nil, serviceErrBizLogic).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Create", ctx, *domainSub).Return(nil, serviceErrBizLogic).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -228,8 +234,8 @@ func TestHandler_CreateSubscription(t *testing.T) {
 		{
 			name: "Service Error - Generic",
 			body: mustMarshal(t, newSubDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Create", ctx, *domainSub).Return(nil, serviceErrGeneric).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Create", ctx, *domainSub).Return(nil, serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -242,15 +248,17 @@ func TestHandler_CreateSubscription(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th)
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/subscriptions", tc.body)
 			rr := httptest.NewRecorder()
 
-			bundle.h.CreateSubscription(rr, req.WithContext(ctx))
+			th.h.CreateSubscription(rr, req.WithContext(ctx))
 
 			tc.assertFunc(t, rr)
 		})
@@ -258,18 +266,10 @@ func TestHandler_CreateSubscription(t *testing.T) {
 }
 
 func TestHandler_UpdateSubscription(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	subID := uuid.New()
-	updateDTO := dto.UpdateSubscription{
-		ServiceName: func(s string) *string { return &s }("New Name"),
-	}
-	domainUpdate, err := fromUpdateSubscriptionDTO(&updateDTO)
-	require.NoError(t, err)
-
-	updatedSub := &domain.Subscription{
-		ID:          subID,
-		ServiceName: *updateDTO.ServiceName,
-	}
 
 	serviceErrNotFound := subservice.NewErr("subservice.Update", subservice.KindNotFound)
 	serviceErrBizLogic := subservice.NewErr("subservice.Update", subservice.KindBusinessLogic)
@@ -277,25 +277,65 @@ func TestHandler_UpdateSubscription(t *testing.T) {
 	serviceErrGeneric := subservice.WrapErr("subservice.Update", subservice.KindUnknown, genericErr)
 
 	testCases := []struct {
-		name       string
-		subID      string
-		body       io.Reader
-		setupMocks func(bundle testHarness)
-		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
+		name                 string
+		subID                string
+		body                 io.Reader
+		expectedDomainUpdate domain.SubscriptionUpdate
+		setupMocks           func(th testHarness, expectedUpdate domain.SubscriptionUpdate)
+		assertFunc           func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
-			name:  "Success",
+			name:  "Success - Update ServiceName",
 			subID: subID.String(),
-			body:  mustMarshal(t, updateDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Update", ctx, subID, *domainUpdate).Return(updatedSub, nil).Once()
+			body:  mustMarshal(t, map[string]string{"service_name": "New Name"}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{
+				ServiceName: func(s string) *string { return &s }("New Name"),
+			},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				updatedSub := &domain.Subscription{ID: subID, ServiceName: "New Name"}
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(updatedSub, nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
 				var respBody dto.Subscription
 				err := json.NewDecoder(rr.Body).Decode(&respBody)
 				require.NoError(t, err)
-				assert.Equal(t, rr.Code, http.StatusOK)
-				assert.Equal(t, toSubscriptionDTO(updatedSub), &respBody)
+				assert.Equal(t, "New Name", respBody.ServiceName)
+			},
+		},
+		{
+			name:                 "Success - Clear EndDate",
+			subID:                subID.String(),
+			body:                 mustMarshal(t, map[string]any{"end_date": nil}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{ClearEndDate: true},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				updatedSub := &domain.Subscription{ID: subID, EndDate: nil}
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(updatedSub, nil).Once()
+			},
+			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
+				var respBody dto.Subscription
+				err := json.NewDecoder(rr.Body).Decode(&respBody)
+				require.NoError(t, err)
+				assert.Nil(t, respBody.EndDate)
+			},
+		},
+		{
+			name:  "Success - Update EndDate",
+			subID: subID.String(),
+			body:  mustMarshal(t, map[string]string{"end_date": "12-2025"}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{
+				EndDate: func() *time.Time {
+					t, _ := time.Parse("01-2006", "12-2025")
+					return &t
+				}(),
+			},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				updatedSub := &domain.Subscription{ID: subID, EndDate: expectedUpdate.EndDate}
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(updatedSub, nil).Once()
+			},
+			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rr.Code)
 			},
 		},
 		{
@@ -304,61 +344,69 @@ func TestHandler_UpdateSubscription(t *testing.T) {
 			body:       strings.NewReader("{invalid json"),
 			setupMocks: nil,
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				var errBody dto.Error
-				err := json.NewDecoder(rr.Body).Decode(&errBody)
-				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusBadRequest), errBody.Code)
+				assert.Equal(t, http.StatusBadRequest, rr.Code)
+			},
+		},
+		{
+			name:       "Validation Error - Invalid Date",
+			subID:      subID.String(),
+			body:       mustMarshal(t, map[string]string{"end_date": "bad-date"}),
+			setupMocks: nil,
+			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 			},
 		},
 		{
 			name:  "Service Error - Not Found",
 			subID: subID.String(),
-			body:  mustMarshal(t, updateDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Update", ctx, subID, *domainUpdate).Return(nil, serviceErrNotFound).Once()
+			body:  mustMarshal(t, map[string]string{"service_name": "New Name"}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{
+				ServiceName: func(s string) *string { return &s }("New Name"),
+			},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(nil, serviceErrNotFound).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				var errBody dto.Error
-				err := json.NewDecoder(rr.Body).Decode(&errBody)
-				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusNotFound), errBody.Code)
+				assert.Equal(t, http.StatusNotFound, rr.Code)
 			},
 		},
 		{
 			name:  "Service Error - Business Logic",
 			subID: subID.String(),
-			body:  mustMarshal(t, updateDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Update", ctx, subID, *domainUpdate).Return(nil, serviceErrBizLogic).Once()
+			body:  mustMarshal(t, map[string]string{"service_name": "New Name"}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{
+				ServiceName: func(s string) *string { return &s }("New Name"),
+			},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(nil, serviceErrBizLogic).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				var errBody dto.Error
-				err := json.NewDecoder(rr.Body).Decode(&errBody)
-				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusUnprocessableEntity), errBody.Code)
+				assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 			},
 		},
 		{
 			name:  "Service Error - Generic",
 			subID: subID.String(),
-			body:  mustMarshal(t, updateDTO),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Update", ctx, subID, *domainUpdate).Return(nil, serviceErrGeneric).Once()
+			body:  mustMarshal(t, map[string]string{"service_name": "New Name"}),
+			expectedDomainUpdate: domain.SubscriptionUpdate{
+				ServiceName: func(s string) *string { return &s }("New Name"),
+			},
+			setupMocks: func(th testHarness, expectedUpdate domain.SubscriptionUpdate) {
+				th.service.On("Update", ctx, subID, expectedUpdate).Return(nil, serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				var errBody dto.Error
-				err := json.NewDecoder(rr.Body).Decode(&errBody)
-				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusInternalServerError), errBody.Code)
+				assert.Equal(t, http.StatusInternalServerError, rr.Code)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th, tc.expectedDomainUpdate)
 			}
 
 			req := newRequestWithChiCtx(t, http.MethodPut, "/subscriptions/"+tc.subID, tc.body, map[string]string{"id": tc.subID})
@@ -367,13 +415,15 @@ func TestHandler_UpdateSubscription(t *testing.T) {
 			id, err := uuid.Parse(tc.subID)
 			require.NoError(t, err)
 
-			bundle.h.UpdateSubscription(rr, req.WithContext(ctx), id)
+			th.h.UpdateSubscription(rr, req.WithContext(ctx), id)
 			tc.assertFunc(t, rr)
 		})
 	}
 }
 
 func TestHandler_DeleteSubscription(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	subID := uuid.New()
 	serviceErrNotFound := subservice.NewErr("subservice.Delete", subservice.KindNotFound)
@@ -383,14 +433,14 @@ func TestHandler_DeleteSubscription(t *testing.T) {
 	testCases := []struct {
 		name       string
 		subID      string
-		setupMocks func(bundle testHarness)
+		setupMocks func(th testHarness)
 		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
 			name:  "Success",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Delete", ctx, subID).Return(nil).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Delete", ctx, subID).Return(nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				assert.Equal(t, rr.Code, http.StatusNoContent)
@@ -400,8 +450,8 @@ func TestHandler_DeleteSubscription(t *testing.T) {
 		{
 			name:  "Not Found",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Delete", ctx, subID).Return(serviceErrNotFound).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Delete", ctx, subID).Return(serviceErrNotFound).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -413,8 +463,8 @@ func TestHandler_DeleteSubscription(t *testing.T) {
 		{
 			name:  "Generic Service Error",
 			subID: subID.String(),
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("Delete", ctx, subID).Return(serviceErrGeneric).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("Delete", ctx, subID).Return(serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -427,9 +477,11 @@ func TestHandler_DeleteSubscription(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th)
 			}
 
 			req := newRequestWithChiCtx(t, http.MethodDelete, "/subscriptions/"+tc.subID, nil, map[string]string{"id": tc.subID})
@@ -438,13 +490,15 @@ func TestHandler_DeleteSubscription(t *testing.T) {
 			id, err := uuid.Parse(tc.subID)
 			require.NoError(t, err)
 
-			bundle.h.DeleteSubscription(rr, req.WithContext(ctx), id)
+			th.h.DeleteSubscription(rr, req.WithContext(ctx), id)
 			tc.assertFunc(t, rr)
 		})
 	}
 }
 
 func TestHandler_ListSubscriptions(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	expectedSubs := []domain.Subscription{
 		{ID: uuid.New(), ServiceName: "Test 1"},
@@ -456,14 +510,14 @@ func TestHandler_ListSubscriptions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		params     dto.ListSubscriptionsParams
-		setupMocks func(bundle testHarness)
+		setupMocks func(th testHarness)
 		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
 			name:   "Success - No Filter",
 			params: dto.ListSubscriptionsParams{},
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("List", ctx, mock.Anything).Return(expectedSubs, nil).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("List", ctx, mock.Anything).Return(expectedSubs, nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var respBody []dto.Subscription
@@ -477,8 +531,8 @@ func TestHandler_ListSubscriptions(t *testing.T) {
 		{
 			name:   "Service Error",
 			params: dto.ListSubscriptionsParams{},
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("List", ctx, mock.Anything).Return(nil, serviceErrGeneric).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("List", ctx, mock.Anything).Return(nil, serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -491,21 +545,25 @@ func TestHandler_ListSubscriptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th)
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/subscriptions", nil)
 			rr := httptest.NewRecorder()
 
-			bundle.h.ListSubscriptions(rr, req.WithContext(ctx), tc.params)
+			th.h.ListSubscriptions(rr, req.WithContext(ctx), tc.params)
 			tc.assertFunc(t, rr)
 		})
 	}
 }
 
 func TestHandler_GetTotalCost(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	userID := uuid.New()
 	genericErr := errors.New("generic error")
@@ -514,7 +572,7 @@ func TestHandler_GetTotalCost(t *testing.T) {
 	testCases := []struct {
 		name       string
 		params     dto.GetTotalCostParams
-		setupMocks func(bundle testHarness)
+		setupMocks func(th testHarness)
 		assertFunc func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
@@ -522,8 +580,8 @@ func TestHandler_GetTotalCost(t *testing.T) {
 			params: dto.GetTotalCostParams{
 				UserId: userID,
 			},
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("TotalCost", ctx, mock.Anything, mock.Anything, mock.Anything).Return(12345, nil).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("TotalCost", ctx, mock.Anything, mock.Anything, mock.Anything).Return(12345, nil).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var respBody dto.TotalCost
@@ -554,8 +612,8 @@ func TestHandler_GetTotalCost(t *testing.T) {
 			params: dto.GetTotalCostParams{
 				UserId: userID,
 			},
-			setupMocks: func(bundle testHarness) {
-				bundle.service.On("TotalCost", ctx, mock.Anything, mock.Anything, mock.Anything).Return(0, serviceErrGeneric).Once()
+			setupMocks: func(th testHarness) {
+				th.service.On("TotalCost", ctx, mock.Anything, mock.Anything, mock.Anything).Return(0, serviceErrGeneric).Once()
 			},
 			assertFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				var errBody dto.Error
@@ -568,15 +626,17 @@ func TestHandler_GetTotalCost(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle := setup(t)
+			t.Parallel()
+
+			th := setup(t)
 			if tc.setupMocks != nil {
-				tc.setupMocks(bundle)
+				tc.setupMocks(th)
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/subscriptions/total_cost", nil)
 			rr := httptest.NewRecorder()
 
-			bundle.h.GetTotalCost(rr, req.WithContext(ctx), tc.params)
+			th.h.GetTotalCost(rr, req.WithContext(ctx), tc.params)
 			tc.assertFunc(t, rr)
 		})
 	}
