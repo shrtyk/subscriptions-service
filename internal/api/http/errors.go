@@ -68,7 +68,7 @@ func processAppError(err error) *HttpError {
 		case subservice.KindNotFound:
 			return NewHTTPError(http.StatusNotFound, "The requested resource was not found", serviceErr)
 		case subservice.KindBusinessLogic:
-			return NewHTTPError(http.StatusBadRequest, "The operation cannot be completed due to a business rule violation", serviceErr)
+			return NewHTTPError(http.StatusUnprocessableEntity, "The operation cannot be completed due to a business rule violation", serviceErr)
 		default:
 			return InternalError(serviceErr)
 		}

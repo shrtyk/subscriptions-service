@@ -32,10 +32,7 @@ func (h *handler) ListSubscriptions(w http.ResponseWriter, r *http.Request, para
 		dtoSubs = append(dtoSubs, *toSubscriptionDTO(&sub))
 	}
 
-	err = WriteJSON(w, HttpResponse[[]dto.Subscription]{
-		Success: true,
-		Body:    dtoSubs,
-	}, http.StatusOK, nil)
+	err = WriteJSON(w, dtoSubs, http.StatusOK, nil)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 	}
@@ -60,11 +57,7 @@ func (h *handler) CreateSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = WriteJSON(w, HttpResponse[*dto.Subscription]{
-		Success: true,
-		Message: "subscription successfully  created",
-		Body:    toSubscriptionDTO(createdSub),
-	}, http.StatusCreated, nil)
+	err = WriteJSON(w, toSubscriptionDTO(createdSub), http.StatusCreated, nil)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 	}
@@ -89,11 +82,7 @@ func (h *handler) GetTotalCost(w http.ResponseWriter, r *http.Request, params dt
 		return
 	}
 
-	err = WriteJSON(w, HttpResponse[dto.TotalCost]{
-		Success: true,
-		Message: "total cost",
-		Body:    dto.TotalCost{TotalCost: &total},
-	}, http.StatusOK, nil)
+	err = WriteJSON(w, dto.TotalCost{TotalCost: &total}, http.StatusOK, nil)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 	}
@@ -105,13 +94,7 @@ func (h *handler) DeleteSubscription(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	err := WriteJSON(w, HttpResponse[struct{}]{
-		Success: true,
-		Message: "subscription successfully deleted",
-	}, http.StatusOK, nil)
-	if err != nil {
-		WriteHTTPError(w, r, processAppError(err))
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handler) GetSubscriptionById(w http.ResponseWriter, r *http.Request, id types.UUID) {
@@ -121,10 +104,7 @@ func (h *handler) GetSubscriptionById(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 
-	err = WriteJSON(w, HttpResponse[*dto.Subscription]{
-		Success: true,
-		Body:    toSubscriptionDTO(sub),
-	}, http.StatusOK, nil)
+	err = WriteJSON(w, toSubscriptionDTO(sub), http.StatusOK, nil)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 	}
@@ -149,11 +129,7 @@ func (h *handler) UpdateSubscription(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	err = WriteJSON(w, HttpResponse[*dto.Subscription]{
-		Success: true,
-		Message: "subscription successfully updated",
-		Body:    toSubscriptionDTO(updatedSub),
-	}, http.StatusOK, nil)
+	err = WriteJSON(w, toSubscriptionDTO(updatedSub), http.StatusOK, nil)
 	if err != nil {
 		WriteHTTPError(w, r, processAppError(err))
 	}
