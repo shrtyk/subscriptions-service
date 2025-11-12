@@ -4,6 +4,11 @@ include .env
 		migrations/up migrations/up-by-one migrations/down migrations/down-all migrations/status
 
 MIGRATIONS_DIR=./migrations
+UNIT_TESTS_PKGS := $(shell go list ./... | grep -v /mocks | grep -v /gen | grep -v /dto | grep -v /cmd | grep -v /ports)
+
+# Setup enviroment to run
+setup:
+	@cp .env_example .env
 
 # Build containers and start them in background
 docker/up:
@@ -62,3 +67,17 @@ migrations/status:
 # Generate DTOs
 dto/generate:
 	@go generate ./internal/api/http/dto/dto.go
+
+# Generate mocks
+mocks/generate:
+	@go generate ./internal/core/ports/...
+
+# Run unit tests
+unit-tests/run:
+	@mkdir -p coverage
+	@go test -v -race \
+    -coverprofile=coverage.out -covermode=atomic ${UNIT_TESTS_PKGS}
+
+# Run linter
+linter/run:
+	@golangci-lint run ./...
