@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache: true
 
       - name: Install dependencies
@@ -29,10 +29,11 @@ jobs:
           go test -v -race -coverprofile=coverage.out -covermode=atomic \
           $(go list ./... | grep -v /mocks | grep -v /gen | grep -v /dto | grep -v /cmd | grep -v /ports)
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
           flags: go
           verbose: true
+          slug: shrtyk/subscriptions-service
