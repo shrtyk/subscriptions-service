@@ -226,6 +226,7 @@ paths:
       parameters:
         - name: user_id
           in: query
+          required: true
           description: ID of the user
           schema:
             type: string

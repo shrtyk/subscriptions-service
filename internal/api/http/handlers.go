@@ -71,13 +71,10 @@ func (h *handler) CreateSubscription(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetTotalCost(w http.ResponseWriter, r *http.Request, params dto.GetTotalCostParams) {
-	filter := domain.SubscriptionFilter{}
-	if params.UserId != nil {
-		uid := uuid.UUID(*params.UserId)
-		filter.UserID = &uid
-	}
-	if params.ServiceName != nil {
-		filter.ServiceName = params.ServiceName
+	uid := uuid.UUID(params.UserId)
+	filter := domain.SubscriptionFilter{
+		UserID:      &uid,
+		ServiceName: params.ServiceName,
 	}
 
 	start, end, valErr := validateGetTotalCostParams(params)

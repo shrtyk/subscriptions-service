@@ -87,7 +87,7 @@ type ListSubscriptionsParams struct {
 // GetTotalCostParams defines parameters for GetTotalCost.
 type GetTotalCostParams struct {
 	// UserId ID of the user
-	UserId *openapi_types.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 
 	// ServiceName Name of the service
 	ServiceName *string `form:"service_name,omitempty" json:"service_name,omitempty"`
@@ -249,9 +249,16 @@ func (siw *ServerInterfaceWrapper) GetTotalCost(w http.ResponseWriter, r *http.R
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetTotalCostParams
 
-	// ------------- Optional query parameter "user_id" -------------
+	// ------------- Required query parameter "user_id" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "user_id", r.URL.Query(), &params.UserId)
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
 		return
