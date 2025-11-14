@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -35,6 +36,13 @@ func NewSubsRepo(db DBTX, cfg *config.RepoConfig) *subsRepo {
 }
 
 func (r *subsRepo) Create(ctx context.Context, sub *domain.Subscription) error {
+	l := log.FromCtx(ctx).With(slog.String("op", opCreate))
+	l.Debug(
+		"creating subscription in db",
+		slog.String("service_name", sub.ServiceName),
+		slog.String("user_id", sub.UserID.String()),
+	)
+
 	err := r.db.QueryRowContext(
 		ctx, createQuery, sub.ServiceName,
 		sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate).
@@ -51,6 +59,9 @@ func (r *subsRepo) Create(ctx context.Context, sub *domain.Subscription) error {
 }
 
 func (r *subsRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error) {
+	l := log.FromCtx(ctx).With(slog.String("op", opGetByID))
+	l.Debug("getting subscription from db", slog.String("id", id.String()))
+
 	sub := &domain.Subscription{}
 	err := r.db.QueryRowContext(ctx, getByIDQuery, id).Scan(
 		&sub.ID, &sub.ServiceName, &sub.MonthlyCost, &sub.UserID,
@@ -67,6 +78,9 @@ func (r *subsRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscript
 }
 
 func (r *subsRepo) Update(ctx context.Context, sub *domain.Subscription) error {
+	l := log.FromCtx(ctx).With(slog.String("op", opUpdate))
+	l.Debug("updating subscription in db", slog.String("id", sub.ID.String()))
+
 	res, err := r.db.ExecContext(ctx, updateQuery, sub.ServiceName, sub.MonthlyCost, sub.UserID, sub.StartDate, sub.EndDate, sub.ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -88,6 +102,9 @@ func (r *subsRepo) Update(ctx context.Context, sub *domain.Subscription) error {
 }
 
 func (r *subsRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	l := log.FromCtx(ctx).With(slog.String("op", opDelete))
+	l.Debug("deleting subscription from db", slog.String("id", id.String()))
+
 	res, err := r.db.ExecContext(ctx, deleteQuery, id)
 	if err != nil {
 		return repos.WrapErr(opDelete, repos.KindUnknown, err)
@@ -124,6 +141,9 @@ func (r *subsRepo) listSubs(
 	op string,
 	queryBuilder func(domain.SubscriptionFilter) (string, []any, error),
 ) ([]domain.Subscription, error) {
+	l := log.FromCtx(ctx).With(slog.String("op", op))
+	l.Debug("listing subscriptions from db", slog.Any("filter", filter))
+
 	query, args, err := queryBuilder(filter)
 	if err != nil {
 		return nil, repos.WrapErr(op, repos.KindUnknown, err)

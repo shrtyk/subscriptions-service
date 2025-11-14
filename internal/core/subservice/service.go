@@ -3,6 +3,7 @@ package subservice
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"github.com/shrtyk/subscriptions-service/internal/core/ports/subservice"
 	"github.com/shrtyk/subscriptions-service/internal/core/ports/tx"
 	"github.com/shrtyk/subscriptions-service/pkg/errkit"
+	"github.com/shrtyk/subscriptions-service/pkg/log"
 )
 
 const (
@@ -43,6 +45,8 @@ func (s *service) Create(ctx context.Context, sub domain.Subscription) (*domain.
 		}
 		return nil, subservice.WrapErr(opCreate, subservice.KindUnknown, err)
 	}
+
+	log.FromCtx(ctx).Info("subscription created", slog.String("subscription_id", sub.ID.String()))
 
 	return &sub, nil
 }
@@ -110,6 +114,8 @@ func (s *service) Update(ctx context.Context, id uuid.UUID, update domain.Subscr
 		return nil, subservice.WrapErr(opUpdate, subservice.KindUnknown, err)
 	}
 
+	log.FromCtx(ctx).Info("subscription updated", slog.String("subscription_id", updatedSub.ID.String()))
+
 	return updatedSub, nil
 }
 
@@ -122,10 +128,14 @@ func (s *service) Delete(ctx context.Context, id uuid.UUID) error {
 		}
 		return subservice.WrapErr(opDelete, subservice.KindUnknown, err)
 	}
+
+	log.FromCtx(ctx).Info("subscription deleted", slog.String("subscription_id", id.String()))
+
 	return nil
 }
 
 func (s *service) List(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error) {
+	log.FromCtx(ctx).Debug("listing subscriptions", slog.Any("filter", filter))
 	subs, err := s.repo.List(ctx, filter)
 	if err != nil {
 		return nil, subservice.WrapErr(opList, subservice.KindUnknown, err)
@@ -134,6 +144,7 @@ func (s *service) List(ctx context.Context, filter domain.SubscriptionFilter) ([
 }
 
 func (s *service) TotalCost(ctx context.Context, filter domain.SubscriptionFilter, start, end time.Time) (int, error) {
+	log.FromCtx(ctx).Debug("calculating total cost", slog.Any("filter", filter), slog.Time("start", start), slog.Time("end", end))
 	subs, err := s.repo.ListAll(ctx, filter)
 	if err != nil {
 		return 0, subservice.WrapErr(opTotalCost, subservice.KindUnknown, err)
